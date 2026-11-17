@@ -101,19 +101,15 @@ export const ProgressProvider: React.FC<{ children: ReactNode }> = ({ children }
     return diffDays;
   }, []);
 
-  // Primary state
+  // Primary state: Require passcode 040706 on landing page for exclusive access
   const [activeTab, setActiveTab] = useState<'dashboard' | 'map' | 'today' | 'garden' | 'revision' | 'profile' | 'achievements'>('dashboard');
   const [hasStarted, setHasStarted] = useState<boolean>(() => {
     try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        return !!parsed.hasStarted;
-      }
+      const auth = sessionStorage.getItem('DO_IT_FOR_THE_PLOT_AUTH');
+      return auth === '040706';
     } catch (e) {
-      console.error(e);
+      return false;
     }
-    return false;
   });
 
   const [avatarStyle, setAvatarStyle] = useState<AvatarStyle>('botanist');
@@ -148,7 +144,7 @@ export const ProgressProvider: React.FC<{ children: ReactNode }> = ({ children }
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
         const data: Partial<UserProgressState> = JSON.parse(raw);
-        if (data.hasStarted !== undefined) setHasStarted(data.hasStarted);
+        // Keep hasStarted controlled exclusively by passcode authentication
         if (data.avatarStyle) setAvatarStyle(data.avatarStyle);
         if (data.avatarName) setAvatarName(data.avatarName);
         if (data.dailyTasks) setTaskStateMap(data.dailyTasks);
@@ -583,6 +579,7 @@ export const ProgressProvider: React.FC<{ children: ReactNode }> = ({ children }
   // Reset all progress with clean defaults
   const resetAllProgress = () => {
     localStorage.removeItem(STORAGE_KEY);
+    sessionStorage.removeItem('DO_IT_FOR_THE_PLOT_AUTH');
     setHasStarted(false);
     setAvatarStyle('botanist');
     setAvatarName('The Wandering Botanist');

@@ -83,10 +83,13 @@ const MainAppContent: React.FC = () => {
                 </p>
                 <div className="pt-1 flex items-center justify-center gap-3 text-[10px] text-boho-earth-800/50">
                   <button
-                    onClick={() => setHasStarted(false)}
+                    onClick={() => {
+                      sessionStorage.removeItem('DO_IT_FOR_THE_PLOT_AUTH');
+                      setHasStarted(false);
+                    }}
                     className="hover:text-boho-terracotta-600 underline"
                   >
-                    View Opening Scene
+                    Lock & View Opening Scene
                   </button>
                   <span>•</span>
                   <button

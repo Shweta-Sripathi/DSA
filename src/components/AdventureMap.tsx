@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import {
   Lock,
@@ -8,7 +8,8 @@ import {
   Compass,
   MapPin,
   Calendar,
-  Layers
+  Layers,
+  Crosshair
 } from 'lucide-react';
 import { useProgress } from '../context/ProgressContext';
 import { WEEKS_METADATA } from '../data/roadmapData';
@@ -46,6 +47,42 @@ export const AdventureMap: React.FC = () => {
     allDays
   } = useProgress();
 
+  const mapTopRef = useRef<HTMLDivElement>(null);
+  const currentIslandRef = useRef<HTMLDivElement>(null);
+
+  // Automatic slide from top to current position on load
+  useEffect(() => {
+    // 1. Instantly jump to the very top of the map/page
+    if (mapTopRef.current) {
+      mapTopRef.current.scrollIntoView({ behavior: 'instant', block: 'start' });
+    } else {
+      window.scrollTo({ top: 0, behavior: 'instant' });
+    }
+
+    // 2. Smoothly slide/glide down to the user's current island position
+    const timer = setTimeout(() => {
+      if (currentIslandRef.current) {
+        currentIslandRef.current.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+          inline: 'center'
+        });
+      }
+    }, 450);
+
+    return () => clearTimeout(timer);
+  }, [currentIslandWeek]);
+
+  const slideToCurrentIsland = () => {
+    if (currentIslandRef.current) {
+      currentIslandRef.current.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+        inline: 'center'
+      });
+    }
+  };
+
   const handleSelectIsland = (weekNum: number) => {
     setInspectWeek(weekNum);
     setCurrentIslandWeek(weekNum);
@@ -61,11 +98,8 @@ export const AdventureMap: React.FC = () => {
     return `${acc} C ${prev.x} ${midY}, ${pt.x} ${midY}, ${pt.x} ${pt.y}`;
   }, '');
 
-  // Calculate current avatar coordinate
-  const activeAvatarPoint = ISLAND_COORDINATES.find(pt => pt.week === currentIslandWeek) || ISLAND_COORDINATES[0];
-
   return (
-    <div className="space-y-6">
+    <div ref={mapTopRef} className="space-y-6">
       
       {/* Map Control Bar & Storyteller Intro */}
       <div className="rounded-3xl bg-white p-5 sm:p-6 border border-boho-cream-300 shadow-soft flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -86,19 +120,30 @@ export const AdventureMap: React.FC = () => {
           </p>
         </div>
 
-        {/* Legend */}
-        <div className="flex items-center gap-3 sm:gap-4 text-xs font-medium bg-boho-cream-100/70 p-3 rounded-2xl border border-boho-cream-200">
-          <div className="flex items-center gap-1.5">
-            <span className="w-3 h-3 rounded-full bg-boho-sage-500" />
-            <span>Completed</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="w-3 h-3 rounded-full bg-boho-terracotta-500 animate-pulse" />
-            <span>Active Island</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="w-3 h-3 rounded-full bg-boho-cream-300 border border-boho-cream-400" />
-            <span>Locked</span>
+        {/* Legend & Auto-Slide Button */}
+        <div className="flex items-center gap-2.5 sm:gap-4 flex-wrap">
+          <button
+            onClick={slideToCurrentIsland}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-2xl bg-boho-peach-100 hover:bg-boho-peach-200 border border-boho-peach-300 text-xs font-semibold text-boho-terracotta-600 transition-all shadow-sm"
+            title="Slide view directly to current active island"
+          >
+            <Crosshair className="w-3.5 h-3.5 animate-spin-slow" />
+            <span>Slide to Week {currentIslandWeek}</span>
+          </button>
+
+          <div className="flex items-center gap-3 text-xs font-medium bg-boho-cream-100/70 p-2 sm:p-2.5 rounded-2xl border border-boho-cream-200">
+            <div className="flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-full bg-boho-sage-500" />
+              <span>Done</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-full bg-boho-terracotta-500 animate-pulse" />
+              <span>Active</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-full bg-boho-cream-300 border border-boho-cream-400" />
+              <span>Locked</span>
+            </div>
           </div>
         </div>
       </div>
@@ -177,13 +222,19 @@ export const AdventureMap: React.FC = () => {
             return (
               <div
                 key={coord.week}
+                ref={isCurrent ? currentIslandRef : undefined}
                 style={{
                   left: `${leftPercent}%`,
                   top: `${topPercent}%`,
                   transform: 'translate(-50%, -50%)',
                 }}
-                className="absolute z-20"
+                className={`absolute z-20 transition-all duration-500 ${isCurrent ? 'scale-105' : ''}`}
               >
+                {/* Glowing beacon for current island */}
+                {isCurrent && (
+                  <div className="absolute -inset-2 rounded-4xl bg-boho-terracotta-400/25 blur-md animate-pulse pointer-events-none" />
+                )}
+
                 {/* Island Card */}
                 <motion.div
                   whileHover={{ scale: 1.05 }}
@@ -191,7 +242,7 @@ export const AdventureMap: React.FC = () => {
                     isCompleted
                       ? 'bg-gradient-to-br from-white via-boho-sage-50 to-boho-cream-50 border-boho-sage-300 shadow-soft-lg ring-2 ring-boho-sage-200'
                       : isCurrent
-                      ? 'bg-gradient-to-br from-white via-boho-rose-50 to-boho-peach-50 border-boho-terracotta-400 shadow-soft-lg ring-4 ring-boho-peach-300/60'
+                      ? 'bg-gradient-to-br from-white via-boho-rose-50 to-boho-peach-50 border-boho-terracotta-400 shadow-soft-lg ring-4 ring-boho-peach-300/70'
                       : isUnlocked
                       ? 'bg-white border-boho-cream-300 shadow-soft'
                       : 'bg-boho-cream-100/90 border-boho-cream-200 opacity-70 shadow-sm'
@@ -257,7 +308,7 @@ export const AdventureMap: React.FC = () => {
                     }}
                     className="absolute -top-12 -right-4 z-30 pointer-events-none"
                   >
-                    <JourneyAvatar style={avatarStyle} size="md" />
+                    <JourneyAvatar style={avatarStyle} size="md" isCelebrating={false} />
                   </motion.div>
                 )}
               </div>

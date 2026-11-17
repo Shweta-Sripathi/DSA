@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { Sparkles, ArrowRight, Heart } from 'lucide-react';
-import { BotanicalWreath, BotanicalLeaf } from './BotanicalDecorations';
+import React, { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Sparkles, ArrowRight, Heart, Lock, KeyRound, Check, AlertCircle } from 'lucide-react';
+import { BotanicalWreath, BotanicalLeaf, BotanicalFlower } from './BotanicalDecorations';
 
 interface LandingPageProps {
   onBeginJourney: () => void;
@@ -12,6 +12,15 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onBeginJourney }) => {
   const [typedTitle, setTypedTitle] = useState("");
   const [typingDone, setTypingDone] = useState(false);
 
+  // Passcode state
+  const [passcode, setPasscode] = useState("");
+  const [errorMsg, setErrorMsg] = useState("");
+  const [isUnlocked, setIsUnlocked] = useState(false);
+  const [shake, setShake] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const CORRECT_PASSCODE = "040706";
+
   useEffect(() => {
     let index = 0;
     const interval = setInterval(() => {
@@ -19,12 +28,32 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onBeginJourney }) => {
       setTypedTitle(fullTitle.slice(0, index));
       if (index >= fullTitle.length) {
         clearInterval(interval);
-        setTimeout(() => setTypingDone(true), 400);
+        setTimeout(() => {
+          setTypingDone(true);
+          setTimeout(() => inputRef.current?.focus(), 400);
+        }, 400);
       }
-    }, 110);
+    }, 105);
 
     return () => clearInterval(interval);
   }, []);
+
+  const handleUnlock = (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMsg("");
+
+    if (passcode.trim() === CORRECT_PASSCODE) {
+      setIsUnlocked(true);
+      sessionStorage.setItem('DO_IT_FOR_THE_PLOT_AUTH', CORRECT_PASSCODE);
+      setTimeout(() => {
+        onBeginJourney();
+      }, 700);
+    } else {
+      setShake(true);
+      setErrorMsg("Incorrect passcode. Access is strictly reserved for the protagonist.");
+      setTimeout(() => setShake(false), 500);
+    }
+  };
 
   return (
     <motion.div
@@ -43,14 +72,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onBeginJourney }) => {
       <motion.div
         animate={{ y: [0, -10, 0], rotate: [0, 5, 0] }}
         transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-        className="absolute top-16 left-1/4 hidden md:block opacity-35"
+        className="absolute top-16 left-1/4 hidden md:block opacity-35 pointer-events-none"
       >
         <BotanicalLeaf className="w-10 h-10 text-boho-sage-400" />
       </motion.div>
       <motion.div
         animate={{ y: [0, 12, 0], rotate: [0, -8, 0] }}
         transition={{ duration: 7, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-        className="absolute bottom-24 left-16 hidden md:block opacity-30"
+        className="absolute bottom-24 left-16 hidden md:block opacity-30 pointer-events-none"
       >
         <BotanicalLeaf className="w-12 h-12 text-boho-rose-400" />
       </motion.div>
@@ -111,27 +140,92 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onBeginJourney }) => {
           initial={{ opacity: 0 }}
           animate={{ opacity: typingDone ? 1 : 0 }}
           transition={{ delay: 0.3, duration: 0.9 }}
-          className="text-xs sm:text-sm text-boho-earth-800/60 max-w-md mx-auto mb-8 font-sans"
+          className="text-xs sm:text-sm text-boho-earth-800/60 max-w-md mx-auto mb-6 font-sans"
         >
           Nov 29, 2026 – Mar 13, 2027 • An illustrated odyssey from fundamentals to dynamic programming mastery.
         </motion.p>
 
-        {/* Step 6: Begin My Journey Button */}
+        {/* Exclusive Passcode Authentication Card (Code: 040706) */}
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: typingDone ? 1 : 0, scale: typingDone ? 1 : 0.9 }}
-          transition={{ delay: 0.5, duration: 0.6 }}
-          className="flex flex-col items-center gap-3"
+          transition={{ delay: 0.45, duration: 0.6 }}
+          className="w-full max-w-sm mx-auto"
         >
-          <button
-            onClick={onBeginJourney}
-            className="group relative inline-flex items-center gap-3 px-8 py-4 rounded-full bg-boho-terracotta-500 hover:bg-boho-terracotta-600 text-white font-medium text-base shadow-soft-lg hover:shadow-boho transform hover:-translate-y-0.5 active:translate-y-0 transition-all duration-300"
+          <motion.form
+            onSubmit={handleUnlock}
+            animate={shake ? { x: [-10, 10, -8, 8, -4, 4, 0] } : {}}
+            transition={{ duration: 0.4 }}
+            className="rounded-3xl bg-white/90 backdrop-blur-md p-5 sm:p-6 border border-boho-cream-300 shadow-soft-lg flex flex-col items-center gap-3.5"
           >
-            <span>Begin My Journey</span>
-            <ArrowRight className="w-5 h-5 transition-transform duration-300 group-hover:translate-x-1" />
-          </button>
+            <div className="flex items-center gap-2 text-xs font-semibold text-boho-terracotta-600 uppercase tracking-wider">
+              <Lock className="w-3.5 h-3.5" />
+              <span>Exclusively Protected Realm</span>
+            </div>
 
-          <span className="text-xs text-boho-earth-800/50 flex items-center gap-1.5 mt-2">
+            <p className="text-[11px] text-boho-earth-800/60 text-center font-sans">
+              Enter your exclusive access passcode to enter your personal plot.
+            </p>
+
+            {/* Input field */}
+            <div className="relative w-full">
+              <input
+                ref={inputRef}
+                type="password"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                maxLength={10}
+                value={passcode}
+                onChange={(e) => {
+                  setPasscode(e.target.value);
+                  if (errorMsg) setErrorMsg("");
+                }}
+                placeholder="Enter passcode"
+                className="w-full px-4 py-3 rounded-2xl bg-boho-cream-50 border border-boho-cream-300 text-center tracking-widest font-mono text-base text-boho-earth-900 placeholder:text-boho-earth-800/30 placeholder:tracking-normal focus:outline-none focus:ring-2 focus:ring-boho-terracotta-400 focus:bg-white transition-all shadow-inner-soft"
+              />
+              <KeyRound className="w-4 h-4 text-boho-earth-800/30 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            </div>
+
+            {/* Error message */}
+            <AnimatePresence>
+              {errorMsg && (
+                <motion.div
+                  initial={{ opacity: 0, y: -4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0 }}
+                  className="flex items-center gap-1.5 text-xs text-rose-600 font-medium"
+                >
+                  <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                  <span>{errorMsg}</span>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Enter Button */}
+            <button
+              type="submit"
+              disabled={isUnlocked || !passcode}
+              className={`w-full group relative inline-flex items-center justify-center gap-2.5 px-6 py-3.5 rounded-full font-medium text-sm transition-all duration-300 shadow-soft ${
+                isUnlocked
+                  ? 'bg-boho-sage-500 text-white shadow-boho'
+                  : 'bg-boho-terracotta-500 hover:bg-boho-terracotta-600 text-white hover:shadow-soft-lg transform hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50 disabled:pointer-events-none'
+              }`}
+            >
+              {isUnlocked ? (
+                <>
+                  <Check className="w-4 h-4 animate-bounce" />
+                  <span>Welcome, Protagonist! Entering...</span>
+                </>
+              ) : (
+                <>
+                  <span>Begin My Journey</span>
+                  <ArrowRight className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1" />
+                </>
+              )}
+            </button>
+          </motion.form>
+
+          <span className="text-xs text-boho-earth-800/50 flex items-center justify-center gap-1.5 mt-3">
             <span>Plant seeds today, harvest mastery tomorrow</span>
             <Heart className="w-3.5 h-3.5 text-boho-rose-400 fill-boho-rose-400" />
           </span>
